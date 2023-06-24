@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
-import it.polito.tdp.baseball.model.Grado;
+//import it.polito.tdp.baseball.model.Grado;
 import it.polito.tdp.baseball.model.Model;
 import it.polito.tdp.baseball.model.People;
 import javafx.event.ActionEvent;

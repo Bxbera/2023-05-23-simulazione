@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 import it.polito.tdp.baseball.model.Appearances;
-import it.polito.tdp.baseball.model.Arco;
+import it.polito.tdp.baseball.model.Giocatore;
+//import it.polito.tdp.baseball.model.Arco;
 import it.polito.tdp.baseball.model.People;
 import it.polito.tdp.baseball.model.Team;
 
@@ -102,7 +103,124 @@ public class BaseballDAO {
 	}
 	
 	
+	/**
+	 * Permette di trovare la lista di giocatori che in un anno specifico hanno preso un salario maggiore, 
+	 * contando anche cambi squadra (si sommano), di quello passato come parametro
+	 * @param anno
+	 * @param salario
+	 * @return
+	 */
+	public List<Giocatore> getGiocatoriAnnoSalario(int anno, double salario){
+		/*
+		 * Questa era la query che avevo prima della correzione e che mi dava i risultati sbagliati, ma non so il perché,
+		 * probabilmente perchè il database è sporco
+		 * 
+		 * String sql = "SELECT a.playerID, a.teamID, salary "
+				+ "FROM appearances a, salaries s "
+				+ "WHERE a.`year`= s.year AND a.playerID=s.playerID AND s.`year`= ? AND salary > ? "
+				+ "AND a.teamID=s.teamID";
+		*/
+		String sql = "SELECT playerID, teamID, SUM(salary) AS salTot\n"
+				+ "FROM salaries s "
+				+ "WHERE year= ? "
+				+ "GROUP BY playerID "
+				+ "HAVING salTot > ?" ;
+		List<Giocatore> result = new ArrayList<>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			st.setDouble(2, salario);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(new Giocatore(rs.getString(1), rs.getString(2), rs.getDouble(3)));
+				}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
 	
+	/**
+	 * Permette di prendere tutte le presenze di un giocatore in un anno specifico
+	 * @param anno
+	 * @return
+	 */
+	public List<Giocatore> getAppearances(int anno){
+		String sql = "SELECT playerID, teamID "
+				+ "FROM appearances "
+				+ "WHERE year = ?" ;
+		List<Giocatore> result = new ArrayList<>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(new Giocatore(rs.getString(1), rs.getString(2), 0.0));
+				}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	/**
+	 * metodo che trova i giocatori che hanno fatto presenze nella o nelle squadre durante l'anno 
+	 * e che hanno un salario superiore a quello passato come parametro,
+	 * notare che qui i vertici sono errati, perchè ho persone come:
+	 * [Giocatore [playerId=alvarwi01, teamId=2353, salario=9000000.0], Giocatore [playerId=myersra01, teamId=2349, salario=6916667.0], Giocatore [playerId=smoltjo01, teamId=2328, salario=8500000.0]]
+	 * che non sono nella tabella delle presenze, ma lo sono in quella dei salari
+	 * @param anno
+	 * @param salario
+	 * @return
+	 */
+	public List<Giocatore> getGiocatoriAnnoSalario2(int anno, double salario){
+		String sql = "SELECT playerID, teamID "
+				+ "FROM appearances "
+				+ "WHERE YEAR = ? AND playerID IN  "
+				+ "	(SELECT playerID "
+				+ "	FROM salaries "
+				+ "	WHERE YEAR= ? AND salary> ? "
+				+ "	GROUP BY playerID) "
+				+ "ORDER BY playerid" ;
+		List<Giocatore> result = new ArrayList<>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, anno);
+			st.setInt(2, anno);
+			st.setDouble(3, salario);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(new Giocatore(rs.getString(1), rs.getString(2), 0.0));
+				}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
 	
 	//=================================================================
 	//==================== HELPER FUNCTIONS   =========================
